@@ -1,5 +1,5 @@
 from click.testing import CliRunner
-from cum import config, cum
+from cum import config, cli
 from shutil import copyfile
 import os
 import tempfile
@@ -96,7 +96,7 @@ class CumCLITest(CumTest):
         """
         default_args = ['--cum-directory', self.directory.name]
         args = default_args + list(arguments)
-        return self.runner.invoke(cum.cli, args, **kwargs)
+        return self.runner.invoke(cli.main, args, **kwargs)
 
 
 def skipIfNoBatotoLogin(test):

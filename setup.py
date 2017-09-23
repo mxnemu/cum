@@ -120,6 +120,6 @@ setup(
         'testing': ['codecov', 'cov-core', 'nose2', 'pycodestyle']
     },
     entry_points={
-        'console_scripts': ['cum=cum.cum:cli'],
+        'console_scripts': ['cum=cum.cli:main'],
     }
 )

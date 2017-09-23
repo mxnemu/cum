@@ -19,7 +19,7 @@ class CumGroup(click.Group):
 
 def edit_defaults():
     """Edits the Click command default values after initializing the config."""
-    latest_command = cli.get_command(cli, 'latest')
+    latest_command = main.get_command(main, 'latest')
     for param in latest_command.params:
         if param.human_readable_name == 'relative':
             param.default = config.get().relative_latest
@@ -30,7 +30,7 @@ def edit_defaults():
               help='Directory used by cum to store application files.')
 @click.version_option(version=version.__version__,
                       message=version.version_string())
-def cli(cum_directory=None):
+def main(cum_directory=None):
     global db, output, sanity, utility
     from cum import output
     try:
@@ -43,7 +43,7 @@ def cli(cum_directory=None):
     edit_defaults()
 
 
-@cli.command()
+@main.command()
 @click.argument('alias')
 def chapters(alias):
     """List all chapters for a manga series.
@@ -68,7 +68,7 @@ def chapters(alias):
             click.secho(row, **style)
 
 
-@cli.command(name='config')
+@main.command(name='config')
 @click.argument('mode')
 @click.argument('setting', required=False)
 @click.argument('value', required=False)
@@ -135,7 +135,7 @@ def config_command(mode, setting, value):
         exit(1)
 
 
-@cli.command()
+@main.command()
 @click.argument('aliases', required=False, nargs=-1)
 def download(aliases):
     """Download all available chapters.
@@ -157,7 +157,7 @@ def download(aliases):
                            .format(c=chapter, e=e.message))
 
 
-@cli.command()
+@main.command()
 @click.argument('alias')
 @click.argument('setting')
 @click.argument('value')
@@ -193,7 +193,7 @@ def edit(alias, setting, value):
         output.chapter('Changed {} for {} to {}'.format(setting, alias, value))
 
 
-@cli.command()
+@main.command()
 @click.argument('urls', required=True, nargs=-1)
 @click.option('--directory',
               help='Directory which download the series chapters into.')
@@ -234,7 +234,7 @@ def follow(urls, directory, download, ignore):
                                .format(c=chapter, e=e.message))
 
 
-@cli.command()
+@main.command()
 def follows():
     """List all follows.
 
@@ -248,7 +248,7 @@ def follows():
     output.list([x.alias for x in query])
 
 
-@cli.command()
+@main.command()
 @click.argument('input', required=True, nargs=-1)
 @click.option('--directory',
               help='Directory which download chapters into.')
@@ -307,7 +307,7 @@ def get(input, directory):
                            .format(c=chapter, e=e.message))
 
 
-@cli.command()
+@main.command()
 @click.argument('alias')
 @click.argument('chapters', required=True, nargs=-1)
 def ignore(alias, chapters):
@@ -321,7 +321,7 @@ def ignore(alias, chapters):
     utility.set_ignored(True, alias, chapters)
 
 
-@cli.command()
+@main.command()
 @click.argument('alias', required=False)
 @click.option('--relative/--no-relative', default=False,
               help='Uses relative times instead of absolute times.')
@@ -345,13 +345,13 @@ def latest(alias, relative):
     output.even_columns(updates, separator_width=3)
 
 
-@cli.command()
+@main.command()
 def new():
     """List all new chapters."""
     utility.list_new()
 
 
-@cli.command()
+@main.command()
 @click.argument('alias')
 def open(alias):
     """Open the series URL in a browser."""
@@ -359,7 +359,7 @@ def open(alias):
     click.launch(s.url)
 
 
-@cli.command(check_db=False, name='repair-db')
+@main.command(check_db=False, name='repair-db')
 def repair_db():
     """Runs an automated database repair."""
     sanity_tester = sanity.DatabaseSanity(db.Base, db.engine)
@@ -372,7 +372,7 @@ def repair_db():
             error.fix()
 
 
-@cli.command()
+@main.command()
 @click.argument('alias')
 def unfollow(alias):
     """Unfollow manga.
@@ -387,7 +387,7 @@ def unfollow(alias):
     output.series('Removing follow for {}'.format(s.name))
 
 
-@cli.command()
+@main.command()
 @click.argument('alias')
 @click.argument('chapters', required=True, nargs=-1)
 def unignore(alias, chapters):
@@ -401,7 +401,7 @@ def unignore(alias, chapters):
     utility.set_ignored(False, alias, chapters)
 
 
-@cli.command()
+@main.command()
 @click.option('--fast/--no-fast', default=False,
               help='Run updates based on average release interval.')
 def update(fast):
@@ -448,4 +448,4 @@ def update(fast):
 
 
 if __name__ == '__main__':
-    cli()
+    main()
