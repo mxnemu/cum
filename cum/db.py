@@ -227,9 +227,9 @@ class Chapter(Base):
             'directory': self.series.directory,
             'api_id': self.api_id
         }
-        if parse.netloc == 'bato.to':
-            from cum.scrapers.batoto import BatotoChapter
-            return BatotoChapter(**kwargs)
+        if parse.netloc == 'mangadex.com':
+            from cum.scrapers.mangadex import MangadexChapter
+            return MangadexChapter(**kwargs)
         elif parse.netloc == 'dynasty-scans.com':
             from cum.scrapers.dynastyscans import DynastyScansChapter
             return DynastyScansChapter(**kwargs)
