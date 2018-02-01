@@ -47,7 +47,7 @@ class MangadexSeries(BaseSeries):
                 c = MangadexChapter(name=manga_name, alias=self.alias,
                                     chapter=chapter, url='https://mangadex.com' + url,
                                     groups=groups, title=title)
-                chapters.append(c)
+                chapters = [c] + chapters
         return chapters
 
     @property
@@ -55,6 +55,7 @@ class MangadexSeries(BaseSeries):
         title_re = re.compile(r'^(.+) \(Manga\) - MangaDex')
         title = self.soup.find('title').string.strip()
         title_result = re.search(title_re, title)
+        print(self.soup)
         print("manga title" + title_result.group(1))
         return title_result.group(1)
 
@@ -73,8 +74,12 @@ class MangadexChapter(BaseChapter):
     # var page_array = [
     # 'x1.jpg','x2.jpg','x3.jpg','x4.jpg','x5.jpg','x6.png',];
     pages_re = re.compile(r'var page_array ?= ?\[([^\]]+)\]', re.DOTALL)
-    # 'x1.jpg'
+    # Just extract the single page: 'x1.jpg'
     single_page_re = re.compile(r'\s?\'([^\']+)\',?')
+    # This can be a mirror or data path. Example:
+    # var server = 'https://s2.mangadex.com/'
+    # var server = '/data/'
+    server_re = re.compile(r'var server ?= ?\'([^\']+)\'')
     uses_pages = True
 
     @staticmethod
@@ -96,24 +101,19 @@ class MangadexChapter(BaseChapter):
         else:
             r = self.reader_get(1)
         soup = BeautifulSoup(r.text, config.get().html_parser)
-
-        print('GONNA DOWNLOAD' + self.url)
-        chapter_hash_result = re.search(self.hash_re, r.text)
-        chapter_hash = chapter_hash_result.group(1)
+        chapter_hash = re.search(self.hash_re, r.text).group(1)
         pages_var = re.search(self.pages_re, r.text)
-        print(pages_var)
         pages = [''.join(i) for i in re.findall(self.single_page_re, pages_var.group(1))]
-        print(pages)
         files = [None] * len(pages)
+        mirror = re.search(self.server_re, r.text).group(1) or 'https://mangadex.com/data/'
+        server = 'https://mangadex.com' + mirror if mirror[0] == '/' else mirror
         futures = []
         last_image = None
         with self.progress_bar(pages) as bar:
             for i, page in enumerate(pages):
                 try:
                     if guess_type(page)[0]:
-                        print(chapter_hash)
-                        print(page)
-                        image = 'https://mangadex.com/data/' + chapter_hash + '/' + page
+                        image = server + chapter_hash + '/' + page
                     else:
                         print('guess type failed? {}'.format(guess_type(page)))
                         raise ValueError
@@ -122,14 +122,7 @@ class MangadexChapter(BaseChapter):
                         r.close()
                         raise ValueError
                 except ValueError:  # If we fail to do prediction, scrape
-                    print('TOOD try to save this by scraping or something')
-                    # r = self.reader_get(i + 1)
-                    # soup = BeautifulSoup(r.text, config.get().html_parser)
-                    # image = soup.find('img', id='comic_page').get('src')
-                    # image2_match = re.search(self.next_img_path_re, r.text)
-                    # if image2_match:
-                    #     pages[i + 1] = image2_match.group(1)
-                    # r = requests.get(image, stream=True)
+                    print('failed with server "{}" and {}'.format(server, image))
                 fut = download_pool.submit(self.page_download_task, i, r)
                 fut.add_done_callback(partial(self.page_download_finish,
                                               bar, files))
@@ -139,11 +132,10 @@ class MangadexChapter(BaseChapter):
             self.create_zip(files)
 
     def from_url(url):
-        chapter_hash = re.search(BatotoChapter.url_re, url).group(1)
-        r = BatotoChapter._reader_get(url, 1)
+        r = MangadexChapter._reader_get(url, 1)
         soup = BeautifulSoup(r.text, config.get().html_parser)
         try:
-            series_url = soup.find('a', href=BatotoSeries.url_re)['href']
+            series_url = soup.find('a', href=MangadexSeries.url_re)['href']
         except TypeError:
             raise exceptions.ScrapingError('Chapter has no parent series link')
         series = BatotoSeries(series_url)
