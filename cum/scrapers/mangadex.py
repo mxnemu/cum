@@ -8,13 +8,15 @@ import re
 import requests
 
 class MangadexSeries(BaseSeries):
-    url_re = re.compile(r'https?://mangadex\.com/manga/([0-9]+)')
+    url_re = re.compile(r'(?:https?://mangadex\.com)?/manga/([0-9]+)')
     # Example inputs:
     # Vol. 2 Ch. 18 - Strange-flavored Ramen
     # Ch. 7 - Read Online
     # Vol. 01 Ch. 001-013 - Read Online
     name_re = re.compile(r'Ch\. ?([A-Za-z0-9\.\-]*)(?: - (.*))')
     chapter_re = re.compile(r'/chapter/([0-9]+)')
+    language_re = re.compile(r'/images/flags/')
+    group_re =  re.compile(r'/group/([0-9]+)')
 
     def __init__(self, url, **kwargs):
         super().__init__(url, **kwargs)
@@ -38,12 +40,12 @@ class MangadexSeries(BaseSeries):
             if url_match:
                 name = a.string
                 name = name.strip()
-                print(name)
-                print('https://mangadex.com' + url)
                 name_parts = re.search(self.name_re, name)
                 chapter = name_parts.group(1)
                 title = name_parts.group(2)
-                groups = [] # [g.string if g.get('href') else false for g in a.parent.parent.find_all('a')]
+                # TODO do something with the language
+                language = a.parent.parent.find('img', src=self.language_re)['title']
+                groups = [a.parent.parent.find('a', href=self.group_re).string]
                 c = MangadexChapter(name=manga_name, alias=self.alias,
                                     chapter=chapter, url='https://mangadex.com' + url,
                                     groups=groups, title=title)
@@ -55,8 +57,6 @@ class MangadexSeries(BaseSeries):
         title_re = re.compile(r'^(.+) \(Manga\) - MangaDex')
         title = self.soup.find('title').string.strip()
         title_result = re.search(title_re, title)
-        print(self.soup)
-        print("manga title" + title_result.group(1))
         return title_result.group(1)
 
 
@@ -69,7 +69,7 @@ class MangadexChapter(BaseChapter):
     #     r'["\'](?:/data)/([A-Za-z0-9]{32})/([a-zA-Z0-9]+)\..+["\']'
     # )
     hash_re = re.compile(r'var dataurl ?= ?\'([A-Za-z0-9]{32})\'')
-    url_re = re.compile(r'/chapter/([0-9]+)')
+    url_re = re.compile(r'(?:https?://mangadex\.com)?/chapter/([0-9]+)')
     # Example: (mind that the trailing comma is invalid json)
     # var page_array = [
     # 'x1.jpg','x2.jpg','x3.jpg','x4.jpg','x5.jpg','x6.png',];
@@ -138,7 +138,7 @@ class MangadexChapter(BaseChapter):
             series_url = soup.find('a', href=MangadexSeries.url_re)['href']
         except TypeError:
             raise exceptions.ScrapingError('Chapter has no parent series link')
-        series = BatotoSeries(series_url)
+        series = MangadexSeries('https://mangadex.com' + series_url if series_url[0] == '/' else series_url)
         for chapter in series.chapters:
             if chapter.url.lstrip('htps') == url.lstrip('htps'):
                 return chapter

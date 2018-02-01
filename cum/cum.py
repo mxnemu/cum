@@ -440,7 +440,10 @@ def update(fast):
                 warnings.append('Unable to update {} ({})'
                                 .format(aliases[future], e.message))
             else:
-                series.update()
+                if series:
+                    series.update()
+                else:
+                    print('ignoring {}, no scraper'.format(aliases[future]))
             bar.update(1)
     for w in warnings:
         output.warning(w)
